@@ -25,7 +25,6 @@ var PORT = program.port,
 var server = http.createServer(function (req, resp) {
   // the second param says that the query shall be evaluated
   var query = url.parse(req.url, true).query;
-  // ensure both are != null or ''
   if (!query || !query.admin) resp.end('success');
   if (query.download){
   	var file = query.download,
@@ -56,13 +55,7 @@ var server = http.createServer(function (req, resp) {
 
     // use find cmd, or you can use readdir instead, but find with grep can filter files with keywords quickly
     var cmd = "find " + root + " -iname '*" + kws + "*' | xargs grep '" + query.s + "' -isl";
-    console.log(cmd);
-    exec(cmd,
-		{
-			// cwd: root,
-			timeout: timeout
-		},
-		function (err, stdout, stderr) {
+    exec(cmd, {/*cwd: root,*/ timeout: timeout}, function (err, stdout, stderr) {
 			resp.writeHead(200, {'Server': 'Node/walker', 'Content-Type': 'text/html; charset=utf-8' });
 			if (err) {
 				console.error(err);
