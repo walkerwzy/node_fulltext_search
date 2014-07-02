@@ -7,13 +7,13 @@ var	http = require('http'),
 	zlib = require('zlib'),
 	exec = require('child_process').exec,
 	program = require('commander'),
-	timeout = 10000; // timeout in ms for a single search
+	timeout = 20000; // timeout in ms for a single search
 
 require('buffertools').extend();
 
 program
 	.version('0.0.1')
-	.option('-p, --port [9800]', 'listening on this port', 9800)
+	.option('-p, --port [9801]', 'listening on this port', 9801)
 	.option('-d, --dir [cwd]', 'root directory', process.cwd())
 	.option('-f, --filter [log]', 'file search key words', 'log')
 	.parse(process.argv);
@@ -23,6 +23,7 @@ var PORT = program.port,
 	kws = program.filter;
 
 var server = http.createServer(function (req, resp) {
+  console.log(new Date().toISOString(), req.url);
   // the second param says that the query shall be evaluated
   var query = url.parse(req.url, true).query;
   if (!query || !query.admin) resp.end('success');
@@ -53,14 +54,13 @@ var server = http.createServer(function (req, resp) {
     // replace single with double quotes
     query.s = query.s.replace("'", '"');
 
-    // use find cmd, or you can use readdir instead, but find with grep can filter files with keywords quickly
+    // you can use readdir instead, but find with grep can filter files with keywords quickly
     var cmd = "find " + root + " -iname '*" + kws + "*' | xargs grep '" + query.s + "' -isl";
     exec(cmd, {/*cwd: root,*/ timeout: timeout}, function (err, stdout, stderr) {
 			resp.writeHead(200, {'Server': 'Node/walker', 'Content-Type': 'text/html; charset=utf-8' });
 			if (err) {
 				console.error(err);
 			}
-			console.log(stdout);
 			var results = stdout.split('\n'),
 				key = query.s,
 				offset = parseInt(query.offset || 200, 10),
@@ -83,7 +83,9 @@ var server = http.createServer(function (req, resp) {
 						var start = idx - pre,
 							end = idx + offset,
 							s = c.toString('utf-8', start, end);
-						s = s.substr(2).slice(0,-2).replace(new RegExp('('+key+')','ig'),'<span class="high">$1</span>');
+						s = s.substr(2).slice(0,-2)
+							.replace(new RegExp('('+key+')','ig'),'<span class="high">$1</span>')
+							.replace(/(?=\s\d{4}\-\d{2}\-\d{2})/g,'<br/>');
 						resp.write('<div class="section">'+s+'</div>');
 						if(end >= c.length) break;
 						c = c.slice(end);
@@ -92,7 +94,7 @@ var server = http.createServer(function (req, resp) {
 					console.error("%s, error read file %s: \n%s", new Date().toISOString(), fpath, e);
 				}
 			}
-			resp.end();
+			resp.end('<hr/>powerd by node.js, author: @walker');
 	    });
 	  } else {
 	    resp.writeHead(200, { 'Content-Type': 'text/html' });
